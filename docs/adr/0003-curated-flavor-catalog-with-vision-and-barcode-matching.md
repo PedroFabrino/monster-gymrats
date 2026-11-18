@@ -1,0 +1,3 @@
+# Curated Flavor Catalog With Vision LLM and Barcode Matching
+
+All Check-Ins must resolve against a strictly curated canonical Flavor catalog using multimodal Vision LLM recognition on the check-in photo as the primary detector and UPC/EAN barcode scanning as a deterministic fallback. Free-text or user-created flavors are prohibited because spelling variations (e.g., "White Monster", "Monster Ultra Zero", "Ultra White") would fragment personal, Club, and Global flavor counts and break the Flavor Dex collection mechanic. Missing or newly released regional cans are handled through a `FlavorRequest` submission queue that merges into the canonical catalog upon verification.

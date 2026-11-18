@@ -1,0 +1,3 @@
+# Multi-Brand Check-Ins With Monster-Scoped Challenges
+
+While the platform is centered on Monster Energy, users may log non-Monster cans (`Off-Brand Check-Ins`, such as Red Bull) in the same Check-In flow. Hard-blocking non-Monster drinks creates unnecessary friction for friends who occasionally drink another brand and prevents future expansion to other beverage catalogs. Instead, every Flavor and Check-In carries a `brand` attribute: non-Monster cans post to Club feeds normally, but Challenges and Flavor Dex views filter by `brand = 'monster'` by default unless a Challenge explicitly enables other brands.
