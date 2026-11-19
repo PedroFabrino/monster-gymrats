@@ -37,7 +37,7 @@ export function FlavorLeaderboard({ window }: { readonly window: TimeWindow }) {
   const max = top[0]?.count ?? 1;
 
   return (
-    <section className="card p-4">
+    <section className="card min-w-0 overflow-hidden p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="eyebrow">Flavor Counts</h2>
         <label className="flex items-center gap-2 text-xs text-ink-muted">
