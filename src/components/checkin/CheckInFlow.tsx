@@ -8,8 +8,9 @@ import { ME_ID } from "@/data/mock-data";
 import type { SamplePreset } from "@/data/presets";
 import { createCheckIn } from "@/domain/check-in";
 import { buildShareOptions, toggleShareOption, type ShareOption } from "@/domain/fanout";
-import { interpretVision } from "@/domain/vision";
 import { addHours } from "@/domain/time";
+import { interpretVision } from "@/domain/vision";
+import type { PostCheckInPayload } from "@/state/app-state";
 import { useAppState } from "@/state/AppStateProvider";
 import { useUi } from "@/state/UiProvider";
 import { CaptureStep } from "./CaptureStep";
@@ -20,6 +21,38 @@ import { canContinue, initialDraft, priceToCents, type CheckInDraft } from "./dr
 
 const SCAN_MS = 1600;
 const STEP_TITLES = ["Snap Your Can", "Confirm Flavor", "Share To"] as const;
+
+function buildPayload(input: {
+  readonly draft: CheckInDraft;
+  readonly options: readonly ShareOption[];
+  readonly seq: number;
+  readonly nowIso: string;
+}): PostCheckInPayload {
+  const { draft, options, seq, nowIso } = input;
+  const checkIn = createCheckIn({
+    id: `ci-new-${seq}`,
+    memberId: ME_ID,
+    brand: draft.brand,
+    flavorId: draft.flavorId,
+    requestedFlavorName: draft.flavorId === null ? (draft.request?.name.trim() ?? null) : null,
+    volumeMl: draft.volumeMl,
+    rating: draft.rating,
+    priceCents: priceToCents(draft.priceText),
+    caption: draft.caption.trim(),
+    consumedAt: addHours(nowIso, -draft.retroHours),
+    postedAt: nowIso,
+    scene: draft.preset.scene,
+    unverified: draft.unverified,
+  });
+  const shares = options
+    .filter((o) => o.selected)
+    .map((o) => ({ checkInId: checkIn.id, targetType: o.targetType, targetId: o.targetId }));
+  const flavorRequest =
+    draft.flavorId === null && draft.request !== null
+      ? { name: draft.request.name.trim(), series: draft.request.series }
+      : null;
+  return { checkIn, shares, flavorRequest };
+}
 
 function StepDots({ step }: { readonly step: number }) {
   return (
@@ -34,86 +67,152 @@ function StepDots({ step }: { readonly step: number }) {
   );
 }
 
-export function CheckInFlow({ onClose }: { readonly onClose: () => void }) {
+function FlowFooter({
+  draft,
+  options,
+  onContinue,
+  onPost,
+}: {
+  readonly draft: CheckInDraft | null;
+  readonly options: readonly ShareOption[] | null;
+  readonly onContinue: () => void;
+  readonly onPost: () => void;
+}) {
+  if (draft === null) return null;
+  if (options === null) {
+    return (
+      <button
+        type="button"
+        className="btn-primary w-full"
+        disabled={!canContinue(draft)}
+        onClick={onContinue}
+      >
+        Continue
+      </button>
+    );
+  }
+  return (
+    <button type="button" className="btn-primary w-full" onClick={onPost}>
+      Post Check-In
+    </button>
+  );
+}
+
+type CheckInController = ReturnType<typeof useCheckInState>;
+
+function CheckInSteps({ step, ctrl }: { readonly step: number; readonly ctrl: CheckInController }) {
+  if (step === 0) {
+    return (
+      <CaptureStep
+        scanning={ctrl.scanning}
+        nonCan={ctrl.nonCan}
+        onPick={ctrl.setScanning}
+        onRetake={() => ctrl.setNonCan(null)}
+        onPostAnyway={ctrl.postAnyway}
+      />
+    );
+  }
+  if (step === 1 && ctrl.draft !== null) {
+    return (
+      <div className="flex flex-col gap-5">
+        <IdentifyPanel draft={ctrl.draft} onChange={ctrl.setDraft} />
+        <DetailsFields draft={ctrl.draft} onChange={ctrl.setDraft} />
+      </div>
+    );
+  }
+  if (step === 2 && ctrl.options !== null) {
+    return <ShareStep options={ctrl.options} onToggle={ctrl.toggleShare} />;
+  }
+  return null;
+}
+
+function useVisionScan(opts: {
+  readonly scanning: SamplePreset | null;
+  readonly setScanning: (v: SamplePreset | null) => void;
+  readonly setNonCan: (v: SamplePreset | null) => void;
+  readonly setDraft: (v: CheckInDraft | null) => void;
+}) {
+  const { scanning, setScanning, setNonCan, setDraft } = opts;
+  useEffect(() => {
+    if (scanning === null) return undefined;
+    const timer = window.setTimeout(() => {
+      const result = interpretVision(scanning.visionResponse, FLAVORS);
+      if (result.kind === "non_can") setNonCan(scanning);
+      else
+        setDraft(initialDraft({ preset: scanning, result, catalog: FLAVORS, unverified: false }));
+      setScanning(null);
+    }, SCAN_MS);
+    return () => window.clearTimeout(timer);
+  }, [scanning, setScanning, setNonCan, setDraft]);
+}
+
+function unverifiedDraftFor(preset: SamplePreset): CheckInDraft {
+  return initialDraft({ preset, result: { kind: "non_can" }, catalog: FLAVORS, unverified: true });
+}
+
+function shareTargetsFor(
+  draft: CheckInDraft,
+  state: ReturnType<typeof useAppState>["state"],
+): readonly ShareOption[] {
+  const consumedAt = addHours(state.nowIso, -draft.retroHours);
+  return buildShareOptions(
+    { memberId: ME_ID, brand: draft.brand, consumedAt },
+    state.clubs,
+    state.challenges,
+  );
+}
+
+function useCheckInState(onClose: () => void) {
   const { state, dispatch } = useAppState();
   const { showToast } = useUi();
   const [scanning, setScanning] = useState<SamplePreset | null>(null);
   const [nonCan, setNonCan] = useState<SamplePreset | null>(null);
   const [draft, setDraft] = useState<CheckInDraft | null>(null);
   const [options, setOptions] = useState<readonly ShareOption[] | null>(null);
-  const step = options !== null ? 2 : draft !== null ? 1 : 0;
-
-  useEffect(() => {
-    if (scanning === null) return undefined;
-    const timer = window.setTimeout(() => {
-      const result = interpretVision(scanning.visionResponse, FLAVORS);
-      if (result.kind === "non_can") setNonCan(scanning);
-      else setDraft(initialDraft(scanning, result, FLAVORS, false));
-      setScanning(null);
-    }, SCAN_MS);
-    return () => window.clearTimeout(timer);
-  }, [scanning]);
-
-  const consumedAt = (d: CheckInDraft) => addHours(state.nowIso, -d.retroHours);
-
-  const goShare = (d: CheckInDraft) =>
-    setOptions(
-      buildShareOptions(
-        { memberId: ME_ID, brand: d.brand, consumedAt: consumedAt(d) },
-        state.clubs,
-        state.challenges,
-      ),
+  useVisionScan({ scanning, setScanning, setNonCan, setDraft });
+  const goShare = () => draft !== null && setOptions(shareTargetsFor(draft, state));
+  const postAnyway = () => {
+    if (nonCan !== null) setDraft(unverifiedDraftFor(nonCan));
+    setNonCan(null);
+  };
+  const toggleShare = (key: string) => options && setOptions(toggleShareOption(options, key));
+  const post = () => {
+    if (draft === null || options === null) return;
+    const payload = buildPayload({ draft, options, seq: state.seq, nowIso: state.nowIso });
+    dispatch({ type: "post_check_in", payload });
+    showToast(
+      `Check-In posted to ${payload.shares.length} place${payload.shares.length === 1 ? "" : "s"}`,
     );
-
-  const post = (d: CheckInDraft, opts: readonly ShareOption[]) => {
-    const checkIn = createCheckIn({
-      id: `ci-new-${state.seq}`,
-      memberId: ME_ID,
-      brand: d.brand,
-      flavorId: d.flavorId,
-      requestedFlavorName: d.flavorId === null ? (d.request?.name.trim() ?? null) : null,
-      volumeMl: d.volumeMl,
-      rating: d.rating,
-      priceCents: priceToCents(d.priceText),
-      caption: d.caption.trim(),
-      consumedAt: consumedAt(d),
-      postedAt: state.nowIso,
-      scene: d.preset.scene,
-      unverified: d.unverified,
-    });
-    const shares = opts
-      .filter((o) => o.selected)
-      .map((o) => ({ checkInId: checkIn.id, targetType: o.targetType, targetId: o.targetId }));
-    const flavorRequest =
-      d.flavorId === null && d.request !== null
-        ? { name: d.request.name.trim(), series: d.request.series }
-        : null;
-    dispatch({ type: "post_check_in", payload: { checkIn, shares, flavorRequest } });
-    showToast(`Check-In posted to ${shares.length} place${shares.length === 1 ? "" : "s"}`);
     onClose();
   };
-
-  const back = () => {
-    if (options !== null) setOptions(null);
-    else setDraft(null);
+  return {
+    scanning,
+    setScanning,
+    nonCan,
+    setNonCan,
+    draft,
+    setDraft,
+    options,
+    setOptions,
+    goShare,
+    postAnyway,
+    toggleShare,
+    post,
   };
+}
 
+export function CheckInFlow({ onClose }: { readonly onClose: () => void }) {
+  const ctrl = useCheckInState(onClose);
+  const step = ctrl.options !== null ? 2 : ctrl.draft !== null ? 1 : 0;
   const footer =
-    draft === null ? undefined : options === null ? (
-      <button
-        type="button"
-        className="btn-primary w-full"
-        disabled={!canContinue(draft)}
-        onClick={() => goShare(draft)}
-      >
-        Continue
-      </button>
-    ) : (
-      <button type="button" className="btn-primary w-full" onClick={() => post(draft, options)}>
-        Post Check-In
-      </button>
+    ctrl.draft === null ? undefined : (
+      <FlowFooter
+        draft={ctrl.draft}
+        options={ctrl.options}
+        onContinue={ctrl.goShare}
+        onPost={ctrl.post}
+      />
     );
-
   return (
     <Sheet
       title={STEP_TITLES[step] ?? "Check-In"}
@@ -126,37 +225,13 @@ export function CheckInFlow({ onClose }: { readonly onClose: () => void }) {
       {step > 0 && (
         <button
           type="button"
-          onClick={back}
+          onClick={() => (ctrl.options !== null ? ctrl.setOptions(null) : ctrl.setDraft(null))}
           className="mb-3 flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back
         </button>
       )}
-      {step === 0 && (
-        <CaptureStep
-          scanning={scanning}
-          nonCan={nonCan}
-          onPick={setScanning}
-          onRetake={() => setNonCan(null)}
-          onPostAnyway={() => {
-            if (nonCan === null) return;
-            setDraft(initialDraft(nonCan, { kind: "non_can" }, FLAVORS, true));
-            setNonCan(null);
-          }}
-        />
-      )}
-      {step === 1 && draft !== null && (
-        <div className="flex flex-col gap-5">
-          <IdentifyPanel draft={draft} onChange={setDraft} />
-          <DetailsFields draft={draft} onChange={setDraft} />
-        </div>
-      )}
-      {step === 2 && options !== null && (
-        <ShareStep
-          options={options}
-          onToggle={(key) => setOptions(toggleShareOption(options, key))}
-        />
-      )}
+      <CheckInSteps step={step} ctrl={ctrl} />
     </Sheet>
   );
 }

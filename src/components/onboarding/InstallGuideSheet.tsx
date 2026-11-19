@@ -1,13 +1,12 @@
 "use client";
 
 import { Bell, Check, Chrome, MoreVertical, Plus, Share, SmartphoneNfc } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Segmented } from "@/components/ui/Controls";
 import { Sheet } from "@/components/ui/Sheet";
+import { detectInstallPlatform, type InstallPlatform } from "@/domain/platform";
 
-type Platform = "ios" | "android" | "standalone";
-
-const PLATFORMS: readonly { readonly value: Platform; readonly label: string }[] = [
+const PLATFORMS: readonly { readonly value: InstallPlatform; readonly label: string }[] = [
   { value: "ios", label: "iOS Safari" },
   { value: "android", label: "Android Chrome" },
   { value: "standalone", label: "Installed" },
@@ -19,7 +18,7 @@ interface Step {
   readonly body: string;
 }
 
-const STEPS: Readonly<Record<Platform, readonly Step[]>> = {
+const STEPS: Readonly<Record<InstallPlatform, readonly Step[]>> = {
   ios: [
     {
       icon: <Share className="h-4 w-4" />,
@@ -79,7 +78,13 @@ const STEPS: Readonly<Record<Platform, readonly Step[]>> = {
 };
 
 export function InstallGuideSheet({ onClose }: { readonly onClose: () => void }) {
-  const [platform, setPlatform] = useState<Platform>("ios");
+  const [platform, setPlatform] = useState<InstallPlatform>("ios");
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia?.("(display-mode: standalone)").matches ?? false;
+    setPlatform(detectInstallPlatform({ userAgent: navigator.userAgent, isStandalone }));
+  }, []);
+
   return (
     <Sheet
       title="Install Guide"

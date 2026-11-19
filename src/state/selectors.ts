@@ -80,3 +80,13 @@ export function findClubByCode(state: AppState, code: string): Club | undefined 
   const normalized = code.trim().toUpperCase();
   return state.clubs.find((c) => c.inviteCode === normalized);
 }
+
+export function checkInClubMemberCount(state: AppState, checkInId: string): number {
+  const clubIds = new Set(
+    state.shares
+      .filter((s) => s.targetType === "club" && s.checkInId === checkInId)
+      .map((s) => s.targetId),
+  );
+  const counts = state.clubs.filter((c) => clubIds.has(c.id)).map((c) => c.memberIds.length);
+  return counts.length === 0 ? 3 : Math.max(...counts);
+}

@@ -1,7 +1,0 @@
-{
-  "/clubs/page": "app/clubs/page.js",
-  "/join/[code]/page": "app/join/[code]/page.js",
-  "/stats/page": "app/stats/page.js",
-  "/dex/page": "app/dex/page.js",
-  "/challenges/page": "app/challenges/page.js"
-}

@@ -3,7 +3,7 @@
 import { Flame, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import { ME_ID } from "@/data/mock-data";
-import { dayActivity, monthCalendar, type CalendarCell } from "@/domain/streak";
+import { dayActivity, monthCalendar, type CalendarCell, type StreakSummary } from "@/domain/streak";
 import { useAppState } from "@/state/AppStateProvider";
 import { useStreak, useTodayKey } from "@/state/hooks";
 
@@ -15,6 +15,47 @@ const CELL_STYLE: Readonly<Record<CalendarCell["kind"], string>> = {
 };
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function StreakTotals({ streak }: { readonly streak: StreakSummary }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="rounded-xl bg-volt/10 p-3">
+        <p className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-volt">
+          <Flame className="h-3.5 w-3.5" /> Current
+        </p>
+        <p className="metric text-3xl font-bold text-volt">
+          {streak.current}
+          <span className="text-base"> days</span>
+        </p>
+      </div>
+      <div className="rounded-xl bg-graphite p-3">
+        <p className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-ink-muted">
+          <Trophy className="h-3.5 w-3.5" /> Longest
+        </p>
+        <p className="metric text-3xl font-bold">
+          {streak.longest}
+          <span className="text-base text-ink-muted"> days</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CalendarLegend() {
+  return (
+    <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-ink-muted">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-sm bg-volt" /> Monster
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-sm bg-status-offbrand" /> Off-Brand only (no streak)
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-sm bg-graphite" /> Rest day
+      </span>
+    </div>
+  );
+}
 
 export function StreakCard() {
   const { state } = useAppState();
@@ -32,26 +73,7 @@ export function StreakCard() {
 
   return (
     <section className="card p-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-volt/10 p-3">
-          <p className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-volt">
-            <Flame className="h-3.5 w-3.5" /> Current
-          </p>
-          <p className="metric text-3xl font-bold text-volt">
-            {streak.current}
-            <span className="text-base"> days</span>
-          </p>
-        </div>
-        <div className="rounded-xl bg-graphite p-3">
-          <p className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-ink-muted">
-            <Trophy className="h-3.5 w-3.5" /> Longest
-          </p>
-          <p className="metric text-3xl font-bold">
-            {streak.longest}
-            <span className="text-base text-ink-muted"> days</span>
-          </p>
-        </div>
-      </div>
+      <StreakTotals streak={streak} />
       <h3 className="eyebrow mb-2 mt-4">Monster Streak • {monthLabel}</h3>
       <div className="grid grid-cols-7 gap-1.5 text-center">
         {WEEKDAYS.map((d, i) => (
@@ -72,17 +94,7 @@ export function StreakCard() {
           </span>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-ink-muted">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-volt" /> Monster
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-status-offbrand" /> Off-Brand only (no streak)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-graphite" /> Rest day
-        </span>
-      </div>
+      <CalendarLegend />
     </section>
   );
 }

@@ -3,10 +3,14 @@ import type { CheckIn } from "@/types/domain";
 import { FLAVORS, MONSTER_FLAVORS } from "@/data/flavors";
 import { createCheckIn, isWithinRetroWindow } from "./check-in";
 import { clubDex, dexProgress, personalDex } from "./dex";
+import { globalFlavorCounts, globalRank, localFlavorCounts } from "./stats";
 import { dayActivity, monsterStreak, monthCalendar } from "./streak";
-import { globalRank, localFlavorCounts } from "./stats";
 
-function can(id: string, memberId: string, day: string, extra: Partial<CheckIn> = {}): CheckIn {
+function can(
+  id: string,
+  memberId: string,
+  opts: { readonly day: string; readonly extra?: Partial<CheckIn> },
+): CheckIn {
   return {
     ...createCheckIn({
       id,
@@ -15,18 +19,21 @@ function can(id: string, memberId: string, day: string, extra: Partial<CheckIn> 
       flavorId: "ultra-zero",
       volumeMl: 473,
       rating: 4,
-      consumedAt: `${day}T10:00:00.000Z`,
-      postedAt: `${day}T10:00:00.000Z`,
+      consumedAt: `${opts.day}T10:00:00.000Z`,
+      postedAt: `${opts.day}T10:00:00.000Z`,
       scene: "studio",
     }),
-    ...extra,
+    ...opts.extra,
   };
 }
 
 describe("Flavor Dex", () => {
   it("tracks personal counts and average rating", () => {
     const dex = personalDex(
-      [can("1", "a", "2026-11-01"), can("2", "a", "2026-11-02", { rating: 2 })],
+      [
+        can("1", "a", { day: "2026-11-01" }),
+        can("2", "a", { day: "2026-11-02", extra: { rating: 2 } }),
+      ],
       "a",
     );
     expect(dex.get("ultra-zero")).toMatchObject({ count: 2, avgRating: 3 });
@@ -34,9 +41,9 @@ describe("Flavor Dex", () => {
 
   it("records first discoverer and champion for the Club", () => {
     const dex = clubDex([
-      can("1", "b", "2026-11-03"),
-      can("2", "a", "2026-11-01"),
-      can("3", "b", "2026-11-04"),
+      can("1", "b", { day: "2026-11-03" }),
+      can("2", "a", { day: "2026-11-01" }),
+      can("3", "b", { day: "2026-11-04" }),
     ]);
     expect(dex.get("ultra-zero")).toMatchObject({
       count: 3,
@@ -49,8 +56,8 @@ describe("Flavor Dex", () => {
   it("skips pending flavors and voided cans", () => {
     const dex = personalDex(
       [
-        can("1", "a", "2026-11-01", { flavorId: null }),
-        can("2", "a", "2026-11-01", { status: "voided" }),
+        can("1", "a", { day: "2026-11-01", extra: { flavorId: null } }),
+        can("2", "a", { day: "2026-11-01", extra: { status: "voided" } }),
       ],
       "a",
     );
@@ -67,10 +74,10 @@ describe("Monster Streak", () => {
   it("counts consecutive Monster days and ignores Off-Brand days", () => {
     const activity = dayActivity(
       [
-        can("1", "a", "2026-11-15"),
-        can("2", "a", "2026-11-16", { brand: "redbull" }),
-        can("3", "a", "2026-11-17"),
-        can("4", "a", "2026-11-18"),
+        can("1", "a", { day: "2026-11-15" }),
+        can("2", "a", { day: "2026-11-16", extra: { brand: "redbull" } }),
+        can("3", "a", { day: "2026-11-17" }),
+        can("4", "a", { day: "2026-11-18" }),
       ],
       "a",
     );
@@ -79,7 +86,7 @@ describe("Monster Streak", () => {
   });
 
   it("keeps the streak alive if today has no Check-In yet", () => {
-    const activity = dayActivity([can("1", "a", "2026-11-17")], "a");
+    const activity = dayActivity([can("1", "a", { day: "2026-11-17" })], "a");
     expect(monsterStreak(activity, "2026-11-18").current).toBe(1);
   });
 
@@ -99,8 +106,11 @@ describe("Monster Streak", () => {
 describe("Flavor Counts & retro window", () => {
   it("separates Monster and Off-Brand counts", () => {
     const list = [
-      can("1", "a", "2026-11-18"),
-      can("2", "a", "2026-11-18", { brand: "redbull", flavorId: "redbull-sugarfree" }),
+      can("1", "a", { day: "2026-11-18" }),
+      can("2", "a", {
+        day: "2026-11-18",
+        extra: { brand: "redbull", flavorId: "redbull-sugarfree" },
+      }),
     ];
     const opts = { window: "all" as const, nowIso: "2026-11-18T21:00:00.000Z" };
     expect(localFlavorCounts(list, { ...opts, offBrand: false })).toEqual([
@@ -111,9 +121,21 @@ describe("Flavor Counts & retro window", () => {
     );
   });
 
-  it("ranks Ultra Zero first globally and returns null for unknown flavors", () => {
+  it("ranks Ultra Zero first globally, adds new cans once, and excludes voided cans", () => {
     expect(globalRank(FLAVORS, "ultra-zero", "all")?.rank).toBe(1);
     expect(globalRank(FLAVORS, "nope", "all")).toBeNull();
+    const base = globalRank(FLAVORS, "ultra-zero", "all")?.count ?? 0;
+    const withLive = globalFlavorCounts(FLAVORS, {
+      window: "all",
+      offBrand: false,
+      checkIns: [
+        can("seed-1", "a", { day: "2026-11-18", extra: { status: "voided" } }),
+        can("new-1", "a", { day: "2026-11-18" }),
+        can("new-2", "a", { day: "2026-11-18", extra: { status: "voided" } }),
+      ],
+      baselineIds: new Set(["seed-1"]),
+    });
+    expect(withLive.find((r) => r.flavorId === "ultra-zero")?.count).toBe(base);
   });
 
   it("allows retroactive Check-Ins up to 24h only", () => {

@@ -33,6 +33,7 @@ export interface AppState {
   readonly clubs: readonly Club[];
   readonly challenges: readonly Challenge[];
   readonly checkIns: readonly CheckIn[];
+  readonly baselineIds: ReadonlySet<string>;
   readonly shares: readonly GroupShare[];
   readonly events: readonly ClubEvent[];
   readonly flavorRequests: readonly FlavorRequest[];
@@ -82,6 +83,7 @@ export function createInitialState(): AppState {
     clubs: CLUBS,
     challenges: CHALLENGES,
     checkIns: world.checkIns,
+    baselineIds: new Set(world.checkIns.map((c) => c.id)),
     shares: world.shares,
     events: SEED_TIMELINE_EVENTS.map((item) => ({ clubId: HOME_CLUB_ID, item })),
     flavorRequests: SEED_FLAVOR_REQUESTS,

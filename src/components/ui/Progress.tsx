@@ -1,5 +1,41 @@
 import type { ReactNode } from "react";
 
+function RingArc({
+  size,
+  stroke,
+  pct,
+  color,
+}: {
+  readonly size: number;
+  readonly stroke: number;
+  readonly pct: number;
+  readonly color: string;
+}) {
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - Math.min(100, Math.max(0, pct)) / 100);
+  return (
+    <svg width={size} height={size} className="-rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={r} stroke="#262B36" strokeWidth={stroke} fill="none" />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke={color}
+        strokeWidth={stroke}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        style={{
+          transition: "stroke-dashoffset 700ms cubic-bezier(0.22,1,0.36,1)",
+          filter: `drop-shadow(0 0 6px ${color}88)`,
+        }}
+      />
+    </svg>
+  );
+}
+
 export function ProgressRing({
   pct,
   size = 132,
@@ -13,36 +49,9 @@ export function ProgressRing({
   readonly color?: string;
   readonly children?: ReactNode;
 }) {
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference * (1 - Math.min(100, Math.max(0, pct)) / 100);
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="#262B36"
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={color}
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{
-            transition: "stroke-dashoffset 700ms cubic-bezier(0.22,1,0.36,1)",
-            filter: `drop-shadow(0 0 6px ${color}88)`,
-          }}
-        />
-      </svg>
+      <RingArc size={size} stroke={stroke} pct={pct} color={color} />
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         {children}
       </div>

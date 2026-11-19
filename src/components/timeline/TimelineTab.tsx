@@ -96,6 +96,36 @@ function FeedRow({ item, club }: { readonly item: FeedItem; readonly club: Club 
   );
 }
 
+function TimelineList({
+  items,
+  club,
+  hasMore,
+  onMore,
+}: {
+  readonly items: readonly FeedItem[];
+  readonly club: Club;
+  readonly hasMore: boolean;
+  readonly onMore: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {hasMore && (
+        <button type="button" className="btn-ghost self-center !py-2 text-xs" onClick={onMore}>
+          Show earlier activity
+        </button>
+      )}
+      {items.map((item) => (
+        <FeedRow key={item.id} item={item} club={club} />
+      ))}
+      {items.length === 0 && (
+        <p className="py-12 text-center text-sm text-ink-muted">
+          No activity yet. Post the first Check-In!
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function TimelineTab({ club }: { readonly club: Club }) {
   const { state } = useAppState();
   const [filter, setFilter] = useState<Filter>("all");
@@ -103,7 +133,6 @@ export function TimelineTab({ club }: { readonly club: Club }) {
   const endRef = useRef<HTMLDivElement>(null);
   const feed = useMemo(() => clubFeed(state, club.id), [state, club.id]);
   const filtered = filter === "check_ins" ? feed.filter((i) => i.kind === "check_in") : feed;
-  const visible = filtered.slice(-limit);
   const lastId = feed.at(-1)?.id;
 
   useEffect(() => {
@@ -119,25 +148,12 @@ export function TimelineTab({ club }: { readonly club: Club }) {
         {filter === "media" ? (
           <MediaGallery items={feed} />
         ) : (
-          <div className="flex flex-col gap-4">
-            {filtered.length > limit && (
-              <button
-                type="button"
-                className="btn-ghost self-center !py-2 text-xs"
-                onClick={() => setLimit((l) => l + PAGE)}
-              >
-                Show earlier activity
-              </button>
-            )}
-            {visible.map((item) => (
-              <FeedRow key={item.id} item={item} club={club} />
-            ))}
-            {visible.length === 0 && (
-              <p className="py-12 text-center text-sm text-ink-muted">
-                No activity yet. Post the first Check-In!
-              </p>
-            )}
-          </div>
+          <TimelineList
+            items={filtered.slice(-limit)}
+            club={club}
+            hasMore={filtered.length > limit}
+            onMore={() => setLimit((l) => l + PAGE)}
+          />
         )}
         <div ref={endRef} />
       </div>

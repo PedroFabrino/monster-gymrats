@@ -36,6 +36,39 @@ export function StreakPill() {
   );
 }
 
+function TopBarActions({
+  unread,
+  onNotifications,
+  onProfile,
+}: {
+  readonly unread: number;
+  readonly onNotifications: () => void;
+  readonly onProfile: () => void;
+}) {
+  const member = useMe();
+  return (
+    <div className="flex items-center gap-2">
+      <StreakPill />
+      <button
+        type="button"
+        aria-label={`Notifications, ${unread} unread`}
+        onClick={onNotifications}
+        className="press relative rounded-full bg-carbon p-2 text-ink-muted hover:text-ink"
+      >
+        <Bell className="h-5 w-5" />
+        {unread > 0 && (
+          <span className="metric absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-status-dispute px-1 text-[10px] font-bold text-white">
+            {unread}
+          </span>
+        )}
+      </button>
+      <button type="button" aria-label="Profile & Settings" className="press" onClick={onProfile}>
+        <Avatar member={member} size="sm" />
+      </button>
+    </div>
+  );
+}
+
 export function TopBar({
   title,
   children,
@@ -45,7 +78,6 @@ export function TopBar({
 }) {
   const { state } = useAppState();
   const { openSheet } = useUi();
-  const member = useMe();
   const unread = state.notifications.filter((n) => !n.read).length;
   return (
     <header className="sticky top-0 z-20 border-b border-hairline/60 bg-void/85 px-4 pb-3 pt-[max(env(safe-area-inset-top),14px)] backdrop-blur-xl">
@@ -55,30 +87,11 @@ export function TopBar({
         ) : (
           <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">{title}</h1>
         )}
-        <div className="flex items-center gap-2">
-          <StreakPill />
-          <button
-            type="button"
-            aria-label={`Notifications, ${unread} unread`}
-            onClick={() => openSheet({ kind: "notifications" })}
-            className="press relative rounded-full bg-carbon p-2 text-ink-muted hover:text-ink"
-          >
-            <Bell className="h-5 w-5" />
-            {unread > 0 && (
-              <span className="metric absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-status-dispute px-1 text-[10px] font-bold text-white">
-                {unread}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            aria-label="Profile & Settings"
-            className="press"
-            onClick={() => openSheet({ kind: "profile" })}
-          >
-            <Avatar member={member} size="sm" />
-          </button>
-        </div>
+        <TopBarActions
+          unread={unread}
+          onNotifications={() => openSheet({ kind: "notifications" })}
+          onProfile={() => openSheet({ kind: "profile" })}
+        />
       </div>
       {children}
     </header>

@@ -21,6 +21,56 @@ interface FlairFieldsProps {
   readonly onChange: (value: ProfileUpdate) => void;
 }
 
+function ColorSwatches({
+  selected,
+  onSelect,
+}: {
+  readonly selected: string;
+  readonly onSelect: (color: string) => void;
+}) {
+  return (
+    <div>
+      <span className="eyebrow mb-2 block">Avatar color</span>
+      <div className="flex flex-wrap gap-2">
+        {AVATAR_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={`Avatar color ${c}`}
+            aria-pressed={selected === c}
+            onClick={() => onSelect(c)}
+            className="press flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ background: c }}
+          >
+            {selected === c && <Check className="h-4 w-4 text-void" />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SignatureFlavorSelect({
+  value,
+  onChange,
+}: {
+  readonly value: string;
+  readonly onChange: (flavorId: string) => void;
+}) {
+  return (
+    <label>
+      <span className="eyebrow mb-1.5 block">Signature flavor (flair)</span>
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+        {MONSTER_FLAVORS.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function FlairFields({ value, onChange }: FlairFieldsProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -43,38 +93,14 @@ export function FlairFields({ value, onChange }: FlairFieldsProps) {
           />
         </label>
       </div>
-      <div>
-        <span className="eyebrow mb-2 block">Avatar color</span>
-        <div className="flex flex-wrap gap-2">
-          {AVATAR_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={`Avatar color ${c}`}
-              aria-pressed={value.avatarColor === c}
-              onClick={() => onChange({ ...value, avatarColor: c })}
-              className="press flex h-9 w-9 items-center justify-center rounded-full"
-              style={{ background: c }}
-            >
-              {value.avatarColor === c && <Check className="h-4 w-4 text-void" />}
-            </button>
-          ))}
-        </div>
-      </div>
-      <label>
-        <span className="eyebrow mb-1.5 block">Signature flavor (flair)</span>
-        <select
-          className="input"
-          value={value.signatureFlavorId}
-          onChange={(e) => onChange({ ...value, signatureFlavorId: e.target.value })}
-        >
-          {MONSTER_FLAVORS.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ColorSwatches
+        selected={value.avatarColor}
+        onSelect={(avatarColor) => onChange({ ...value, avatarColor })}
+      />
+      <SignatureFlavorSelect
+        value={value.signatureFlavorId}
+        onChange={(signatureFlavorId) => onChange({ ...value, signatureFlavorId })}
+      />
     </div>
   );
 }

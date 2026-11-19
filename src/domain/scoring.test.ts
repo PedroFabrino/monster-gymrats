@@ -48,8 +48,13 @@ describe("scoreMember", () => {
     expect(scoreMember({ ...base, scoring: "flavor_dex" }, twoToday, "a").points).toBe(2);
   });
 
-  it("awards a new-flavor bonus only on capped cans in Flavor Hunter mode", () => {
-    expect(scoreMember({ ...base, scoring: "flavor_hunter" }, twoToday, "a").points).toBe(3);
+  it("awards uncapped new-flavor bonuses in Flavor Hunter mode while capping base points", () => {
+    expect(scoreMember({ ...base, scoring: "flavor_hunter" }, twoToday, "a").points).toBe(5);
+    const repeatOnSecond = [
+      can("1", "2026-11-18T08:00:00.000Z"),
+      can("2", "2026-11-18T14:00:00.000Z"),
+    ];
+    expect(scoreMember({ ...base, scoring: "flavor_hunter" }, repeatOnSecond, "a").points).toBe(3);
   });
 
   it("excludes Off-Brand and voided Check-Ins from Monster-only Challenges", () => {

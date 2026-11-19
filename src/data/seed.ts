@@ -15,6 +15,9 @@ const CLUB_LOCKED = new Set([
   "nitro-cosmic-peach",
   "reserve-kiwi-strawberry",
   "bad-apple",
+  "monster-super-cola",
+  "juice-viking-berry",
+  "reserve-peaches-creme",
 ]);
 const CAPTIONS = [
   "",

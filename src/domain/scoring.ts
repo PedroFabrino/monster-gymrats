@@ -20,7 +20,7 @@ export const SCORING_HINT: Readonly<Record<ScoringMode, string>> = {
   total_cans: "1 point per can, up to the Daily Point Cap",
   flavor_dex: "1 point per unique Flavor logged",
   active_days: "1 point per day with a Check-In",
-  flavor_hunter: "1 point per capped can, +2 for a Flavor new to you",
+  flavor_hunter: "1 point per capped can, +2 for every new Flavor (uncapped)",
 };
 
 const NEW_FLAVOR_BONUS = 2;
@@ -35,11 +35,11 @@ function pointsFor(mode: ScoringMode, cap: number, sorted: readonly CheckIn[]): 
     const day = dayKey(c.consumedAt);
     const used = perDay.get(day) ?? 0;
     perDay.set(day, used + 1);
-    if (used >= cap) continue;
+    const basePoint = used < cap ? 1 : 0;
     const flavorKey = c.flavorId ?? c.id;
     const bonus = mode === "flavor_hunter" && !seen.has(flavorKey) ? NEW_FLAVOR_BONUS : 0;
     seen.add(flavorKey);
-    points += 1 + bonus;
+    points += basePoint + bonus;
   }
   return points;
 }

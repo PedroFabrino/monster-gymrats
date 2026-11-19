@@ -26,6 +26,38 @@ export function CapPill({ cap }: { readonly cap: number }) {
   );
 }
 
+function ChallengeCardHeader({
+  challenge,
+  clubName,
+}: {
+  readonly challenge: Challenge;
+  readonly clubName: string | undefined;
+}) {
+  const community = challenge.scope === "community";
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="eyebrow flex items-center gap-1.5">
+          {community ? (
+            <Globe2 className="h-3.5 w-3.5 text-series-ultra" />
+          ) : (
+            <Users className="h-3.5 w-3.5 text-volt" />
+          )}
+          {community ? "Community Challenge" : (clubName ?? "Club Challenge")}
+        </p>
+        <h3 className="mt-1 truncate font-display text-2xl font-bold uppercase leading-tight">
+          {challenge.name}
+        </h3>
+      </div>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${challenge.joined ? "bg-volt text-void" : "border border-hairline text-ink-muted"}`}
+      >
+        {challenge.joined ? "Joined" : "Open"}
+      </span>
+    </div>
+  );
+}
+
 export function ChallengeCard({ challenge }: { readonly challenge: Challenge }) {
   const { state } = useAppState();
   const { openSheet } = useUi();
@@ -38,32 +70,7 @@ export function ChallengeCard({ challenge }: { readonly challenge: Challenge }) 
       onClick={() => openSheet({ kind: "challenge", challengeId: challenge.id })}
       className="card press block w-full p-4 text-left transition-colors hover:border-volt/40"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="eyebrow flex items-center gap-1.5">
-            {challenge.scope === "community" ? (
-              <Globe2 className="h-3.5 w-3.5 text-series-ultra" />
-            ) : (
-              <Users className="h-3.5 w-3.5 text-volt" />
-            )}
-            {challenge.scope === "community"
-              ? "Community Challenge"
-              : (club?.name ?? "Club Challenge")}
-          </p>
-          <h3 className="mt-1 truncate font-display text-2xl font-bold uppercase leading-tight">
-            {challenge.name}
-          </h3>
-        </div>
-        {challenge.joined ? (
-          <span className="shrink-0 rounded-full bg-volt px-2 py-0.5 text-[10px] font-bold uppercase text-void">
-            Joined
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-full border border-hairline px-2 py-0.5 text-[10px] font-bold uppercase text-ink-muted">
-            Open
-          </span>
-        )}
-      </div>
+      <ChallengeCardHeader challenge={challenge} clubName={club?.name} />
       <div className="mt-3 flex flex-wrap gap-1.5">
         <BrandRulePill challenge={challenge} />
         <span className="rounded-full bg-graphite px-2 py-0.5 text-[10px] font-semibold text-ink">

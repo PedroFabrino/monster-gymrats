@@ -9,7 +9,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { ME_ID } from "@/data/mock-data";
 import { personalDex } from "@/domain/dex";
 import { SCORING_HINT, SCORING_LABEL, todayCapNotice, type ClubVsClubMode } from "@/domain/scoring";
-import { daysUntil, dayKey, formatDateRange } from "@/domain/time";
+import { dayKey, daysUntil, formatDateRange } from "@/domain/time";
 import { useAppState } from "@/state/AppStateProvider";
 import { clubRows, individualRows } from "@/state/challenge-selectors";
 import { useTodayKey } from "@/state/hooks";
@@ -99,6 +99,82 @@ function Standings({ challenge, view }: { readonly challenge: Challenge; readonl
   );
 }
 
+function ChallengeOverview({
+  challenge,
+  nowIso,
+}: {
+  readonly challenge: Challenge;
+  readonly nowIso: string;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-1.5">
+        <BrandRulePill challenge={challenge} />
+        <CapPill cap={challenge.dailyPointCap} />
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {[
+          ["Scoring", SCORING_LABEL[challenge.scoring]],
+          ["Players", challenge.playerCount.toLocaleString("en-US")],
+          ["Ends in", `${daysUntil(nowIso, challenge.endsAt)}d`],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl bg-carbon p-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-ink-faint">{label}</p>
+            <p className="metric mt-0.5 text-sm font-bold">{value}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-ink-muted">
+        {SCORING_HINT[challenge.scoring]} • {formatDateRange(challenge.startsAt, challenge.endsAt)}
+      </p>
+    </>
+  );
+}
+
+function JoinChallengeButton({
+  joined,
+  onToggle,
+}: {
+  readonly joined: boolean;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={joined ? "btn-ghost w-full" : "btn-primary w-full"}
+    >
+      {joined ? "Leave Challenge" : "Join Challenge"}
+    </button>
+  );
+}
+
+function ChallengeDetailBody({
+  challenge,
+  nowIso,
+  view,
+  onView,
+}: {
+  readonly challenge: Challenge;
+  readonly nowIso: string;
+  readonly view: View;
+  readonly onView: (v: View) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <ChallengeOverview challenge={challenge} nowIso={nowIso} />
+      {challenge.joined && <CapExplainer challenge={challenge} />}
+      {challenge.scope === "community" && (
+        <Segmented options={VIEWS} value={view} onChange={onView} />
+      )}
+      <Standings
+        challenge={challenge}
+        view={challenge.scope === "community" ? view : "individual"}
+      />
+    </div>
+  );
+}
+
 export function ChallengeDetailSheet({
   challengeId,
   onClose,
@@ -113,48 +189,26 @@ export function ChallengeDetailSheet({
   const club = state.clubs.find((c) => c.id === challenge.clubId);
   const subtitle =
     challenge.scope === "community" ? "Community Challenge" : `${club?.name ?? "Club"} Challenge`;
-  const footer = (
-    <button
-      type="button"
-      onClick={() => dispatch({ type: "toggle_join_challenge", challengeId })}
-      className={challenge.joined ? "btn-ghost w-full" : "btn-primary w-full"}
-    >
-      {challenge.joined ? "Leave Challenge" : "Join Challenge"}
-    </button>
-  );
 
   return (
-    <Sheet title={challenge.name} subtitle={subtitle} onClose={onClose} footer={footer} tall>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-1.5">
-          <BrandRulePill challenge={challenge} />
-          <CapPill cap={challenge.dailyPointCap} />
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          {[
-            ["Scoring", SCORING_LABEL[challenge.scoring]],
-            ["Players", challenge.playerCount.toLocaleString("en-US")],
-            ["Ends in", `${daysUntil(state.nowIso, challenge.endsAt)}d`],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-xl bg-carbon p-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-ink-faint">{label}</p>
-              <p className="metric mt-0.5 text-sm font-bold">{value}</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-ink-muted">
-          {SCORING_HINT[challenge.scoring]} •{" "}
-          {formatDateRange(challenge.startsAt, challenge.endsAt)}
-        </p>
-        {challenge.joined && <CapExplainer challenge={challenge} />}
-        {challenge.scope === "community" && (
-          <Segmented options={VIEWS} value={view} onChange={setView} />
-        )}
-        <Standings
-          challenge={challenge}
-          view={challenge.scope === "community" ? view : "individual"}
+    <Sheet
+      title={challenge.name}
+      subtitle={subtitle}
+      onClose={onClose}
+      footer={
+        <JoinChallengeButton
+          joined={challenge.joined}
+          onToggle={() => dispatch({ type: "toggle_join_challenge", challengeId })}
         />
-      </div>
+      }
+      tall
+    >
+      <ChallengeDetailBody
+        challenge={challenge}
+        nowIso={state.nowIso}
+        view={view}
+        onView={setView}
+      />
     </Sheet>
   );
 }

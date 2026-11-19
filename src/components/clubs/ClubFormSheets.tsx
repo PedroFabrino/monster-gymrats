@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import type { Club } from "@/types/domain";
 import { Sheet } from "@/components/ui/Sheet";
 import { ME_ID } from "@/data/mock-data";
 import { newClubId } from "@/domain/club";
@@ -50,6 +51,42 @@ export function CreateClubSheet({ onClose }: { readonly onClose: () => void }) {
   );
 }
 
+function validateJoin(club: Club | undefined): string | null {
+  if (club === undefined) return "No Club matches that code. Double-check it with your friend.";
+  if (club.memberIds.includes(ME_ID)) return `You are already in ${club.name}.`;
+  return null;
+}
+
+function JoinCodeForm({
+  code,
+  error,
+  onCode,
+  onSubmit,
+}: {
+  readonly code: string;
+  readonly error: string | null;
+  readonly onCode: (value: string) => void;
+  readonly onSubmit: (e: FormEvent) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <input
+        className="input metric text-center text-lg uppercase tracking-[0.3em]"
+        autoFocus
+        value={code}
+        onChange={(e) => onCode(e.target.value)}
+        placeholder="GAS-777"
+        aria-invalid={error !== null}
+      />
+      {error !== null && <p className="text-sm text-status-dispute">{error}</p>}
+      <p className="text-xs text-ink-faint">Try the demo code GAS-777</p>
+      <button type="submit" className="btn-primary" disabled={code.trim().length === 0}>
+        Join Club
+      </button>
+    </form>
+  );
+}
+
 export function JoinClubSheet({ onClose }: { readonly onClose: () => void }) {
   const { state, dispatch } = useAppState();
   const { showToast } = useUi();
@@ -60,12 +97,9 @@ export function JoinClubSheet({ onClose }: { readonly onClose: () => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const club = findClubByCode(state, code);
-    if (club === undefined) {
-      setError("No Club matches that code. Double-check it with your friend.");
-      return;
-    }
-    if (club.memberIds.includes(ME_ID)) {
-      setError(`You are already in ${club.name}.`);
+    const issue = validateJoin(club);
+    if (issue !== null || club === undefined) {
+      setError(issue);
       return;
     }
     dispatch({ type: "join_club", clubId: club.id });
@@ -76,24 +110,15 @@ export function JoinClubSheet({ onClose }: { readonly onClose: () => void }) {
 
   return (
     <Sheet title="Join by Code" subtitle="Enter the invite code a friend shared" onClose={onClose}>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <input
-          className="input metric text-center text-lg uppercase tracking-[0.3em]"
-          autoFocus
-          value={code}
-          onChange={(e) => {
-            setCode(e.target.value);
-            setError(null);
-          }}
-          placeholder="GAS-777"
-          aria-invalid={error !== null}
-        />
-        {error !== null && <p className="text-sm text-status-dispute">{error}</p>}
-        <p className="text-xs text-ink-faint">Try the demo code GAS-777</p>
-        <button type="submit" className="btn-primary" disabled={code.trim().length === 0}>
-          Join Club
-        </button>
-      </form>
+      <JoinCodeForm
+        code={code}
+        error={error}
+        onCode={(v) => {
+          setCode(v);
+          setError(null);
+        }}
+        onSubmit={submit}
+      />
     </Sheet>
   );
 }

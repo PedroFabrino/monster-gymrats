@@ -1,9 +1,11 @@
 import type { CheckIn, ReactionKind, TimelineItem } from "@/types/domain";
 import { FLAVORS } from "@/data/flavors";
 import { ME_ID } from "@/data/mock-data";
+import { isWithinRetroWindow } from "@/domain/check-in";
 import { openDispute, resolveDispute, voteOnDispute } from "@/domain/disputes";
 import { addHours } from "@/domain/time";
 import type { AppState, ClubEvent, PostCheckInPayload } from "./app-state";
+import { checkInClubMemberCount } from "./selectors";
 
 const TICK_HOURS = 1 / 60;
 
@@ -45,6 +47,7 @@ function unlockEvents(state: AppState, payload: PostCheckInPayload, nowIso: stri
 }
 
 export function postCheckIn(state: AppState, payload: PostCheckInPayload): AppState {
+  if (!isWithinRetroWindow(payload.checkIn.consumedAt, state.nowIso)) return state;
   const { nowIso, seq } = nextIds(state);
   const request = payload.flavorRequest;
   const requests =
@@ -109,10 +112,20 @@ export function sendChat(state: AppState, clubId: string, body: string): AppStat
 
 export function callBs(state: AppState, checkInId: string, reason: string): AppState {
   const { nowIso, seq } = nextIds(state);
+  const activeMemberCount = checkInClubMemberCount(state, checkInId);
   const next = mapCheckIn(state, checkInId, (c) =>
     c.dispute?.status === "open"
       ? c
-      : { ...c, dispute: openDispute({ id: `d-${seq}`, raisedBy: ME_ID, reason, nowIso }) },
+      : {
+          ...c,
+          dispute: openDispute({
+            id: `d-${seq}`,
+            raisedBy: ME_ID,
+            reason,
+            nowIso,
+            activeMemberCount,
+          }),
+        },
   );
   return { ...next, nowIso, seq };
 }
@@ -120,7 +133,7 @@ export function callBs(state: AppState, checkInId: string, reason: string): AppS
 export function voteDispute(state: AppState, checkInId: string): AppState {
   return mapCheckIn(state, checkInId, (c) => {
     if (c.dispute === null) return c;
-    const dispute = voteOnDispute(c.dispute, ME_ID);
+    const dispute = voteOnDispute(c.dispute, ME_ID, state.nowIso);
     return { ...c, dispute, status: dispute.status === "voided" ? "voided" : c.status };
   });
 }

@@ -38,30 +38,32 @@ function CommunityBanner() {
   );
 }
 
+function ClubActions() {
+  const { openSheet } = useUi();
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        className="btn-ghost"
+        onClick={() => openSheet({ kind: "create_club" })}
+      >
+        <Plus className="h-4 w-4 text-volt" /> Create Club
+      </button>
+      <button type="button" className="btn-ghost" onClick={() => openSheet({ kind: "join_club" })}>
+        <KeyRound className="h-4 w-4 text-volt" /> Join by Code
+      </button>
+    </div>
+  );
+}
+
 export function ClubsHome() {
   const { state } = useAppState();
-  const { openSheet } = useUi();
   const clubs = myClubs(state);
   return (
     <>
       <TopBar />
       <div className="flex flex-col gap-4 px-4 pt-4">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => openSheet({ kind: "create_club" })}
-          >
-            <Plus className="h-4 w-4 text-volt" /> Create Club
-          </button>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => openSheet({ kind: "join_club" })}
-          >
-            <KeyRound className="h-4 w-4 text-volt" /> Join by Code
-          </button>
-        </div>
+        <ClubActions />
         <CommunityBanner />
         <div className="flex items-center justify-between pt-2">
           <h2 className="eyebrow">Your Clubs • {clubs.length}</h2>

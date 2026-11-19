@@ -8,6 +8,19 @@ interface CanArtProps {
   readonly dim?: boolean;
 }
 
+function CanGradient({ id, locked }: { readonly id: string; readonly locked: boolean }) {
+  return (
+    <defs>
+      <linearGradient id={id} x1="0" x2="1">
+        <stop offset="0" stopColor="#000" stopOpacity="0.45" />
+        <stop offset="0.35" stopColor="#fff" stopOpacity={locked ? 0.02 : 0.28} />
+        <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.5" />
+      </linearGradient>
+    </defs>
+  );
+}
+
 export function CanArt({
   color,
   accent,
@@ -24,14 +37,7 @@ export function CanArt({
       className={`${className} ${dim ? "opacity-60 brightness-75" : ""}`}
       aria-hidden="true"
     >
-      <defs>
-        <linearGradient id={gid} x1="0" x2="1">
-          <stop offset="0" stopColor="#000" stopOpacity="0.45" />
-          <stop offset="0.35" stopColor="#fff" stopOpacity={locked ? 0.02 : 0.28} />
-          <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.5" />
-        </linearGradient>
-      </defs>
+      <CanGradient id={gid} locked={locked} />
       <rect x="10" y="4" width="44" height="8" rx="3" fill={locked ? "#22262F" : "#C9CED8"} />
       <path
         d="M8 14 Q8 10 12 10 H52 Q56 10 56 14 V106 Q56 112 50 114 H14 Q8 112 8 106 Z"

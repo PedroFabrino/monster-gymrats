@@ -7,12 +7,14 @@ import { ME_ID } from "@/data/mock-data";
 import { useAppState } from "@/state/AppStateProvider";
 import { useUi } from "@/state/UiProvider";
 
-const REACTIONS: readonly {
+interface ReactionDef {
   readonly kind: ReactionKind;
   readonly label: string;
   readonly color: string;
   readonly icon: (on: boolean) => ReactNode;
-}[] = [
+}
+
+const REACTIONS: readonly ReactionDef[] = [
   {
     kind: "bolt",
     label: "Energy",
@@ -33,6 +35,36 @@ const REACTIONS: readonly {
   },
 ];
 
+function ReactionChip({
+  def,
+  count,
+  on,
+  onToggle,
+}: {
+  readonly def: ReactionDef;
+  readonly count: number;
+  readonly on: boolean;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={`${def.label} reaction, ${count}`}
+      onClick={onToggle}
+      className="press flex items-center gap-1 rounded-full border px-2.5 py-1.5 transition-colors"
+      style={{
+        color: on ? def.color : "#A3ABBB",
+        borderColor: on ? `${def.color}66` : "#262B36",
+        background: on ? `${def.color}14` : "transparent",
+      }}
+    >
+      {def.icon(on)}
+      <span className="metric text-xs">{count}</span>
+    </button>
+  );
+}
+
 export function ReactionBar({ checkIn }: { readonly checkIn: CheckIn }) {
   const { dispatch } = useAppState();
   const { openSheet } = useUi();
@@ -40,30 +72,17 @@ export function ReactionBar({ checkIn }: { readonly checkIn: CheckIn }) {
     checkIn.memberId !== ME_ID && checkIn.status !== "voided" && checkIn.dispute?.status !== "open";
   return (
     <div className="flex items-center gap-1.5">
-      {REACTIONS.map((r) => {
-        const on = checkIn.reactions[r.kind].includes(ME_ID);
-        const count = checkIn.reactions[r.kind].length;
-        return (
-          <button
-            key={r.kind}
-            type="button"
-            aria-pressed={on}
-            aria-label={`${r.label} reaction, ${count}`}
-            onClick={() =>
-              dispatch({ type: "toggle_reaction", checkInId: checkIn.id, kind: r.kind })
-            }
-            className="press flex items-center gap-1 rounded-full border px-2.5 py-1.5 transition-colors"
-            style={{
-              color: on ? r.color : "#A3ABBB",
-              borderColor: on ? `${r.color}66` : "#262B36",
-              background: on ? `${r.color}14` : "transparent",
-            }}
-          >
-            {r.icon(on)}
-            <span className="metric text-xs">{count}</span>
-          </button>
-        );
-      })}
+      {REACTIONS.map((def) => (
+        <ReactionChip
+          key={def.kind}
+          def={def}
+          on={checkIn.reactions[def.kind].includes(ME_ID)}
+          count={checkIn.reactions[def.kind].length}
+          onToggle={() =>
+            dispatch({ type: "toggle_reaction", checkInId: checkIn.id, kind: def.kind })
+          }
+        />
+      ))}
       <button
         type="button"
         onClick={() => openSheet({ kind: "comments", checkInId: checkIn.id })}

@@ -18,6 +18,50 @@ const WINDOWS: readonly { readonly value: TimeWindow; readonly label: string }[]
   ["all", "year", "month", "week"] as const
 ).map((w) => ({ value: w, label: TIME_WINDOW_LABEL[w] }));
 
+function SummaryCards({
+  cans,
+  flavors,
+  caffeine,
+}: {
+  readonly cans: number;
+  readonly flavors: number;
+  readonly caffeine: number;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {[
+        ["Cans", cans.toLocaleString("en-US")],
+        ["Flavors", String(flavors)],
+        ["Caffeine", `${(caffeine / 1000).toFixed(1)}g`],
+      ].map(([label, value]) => (
+        <div key={label} className="card p-3">
+          <p className="text-[10px] uppercase tracking-wider text-ink-faint">{label}</p>
+          <p className="metric mt-0.5 text-xl font-bold">{value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatsActions({
+  onProfile,
+  onWrapped,
+}: {
+  readonly onProfile: () => void;
+  readonly onWrapped: () => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <button type="button" className="btn-ghost" onClick={onProfile}>
+        <UserCog className="h-4 w-4 text-volt" /> Profile &amp; Alerts
+      </button>
+      <button type="button" className="btn-primary !text-base" onClick={onWrapped}>
+        <Share2 className="h-4 w-4" /> Wrapped
+      </button>
+    </div>
+  );
+}
+
 export function StatsScreen() {
   const { state } = useAppState();
   const { openSheet } = useUi();
@@ -41,36 +85,13 @@ export function StatsScreen() {
         </div>
       </TopBar>
       <div className="flex flex-col gap-4 px-4 pt-4">
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            ["Cans", summary.cans.toLocaleString("en-US")],
-            ["Flavors", String(summary.flavors)],
-            ["Caffeine", `${(summary.caffeine / 1000).toFixed(1)}g`],
-          ].map(([label, value]) => (
-            <div key={label} className="card p-3">
-              <p className="text-[10px] uppercase tracking-wider text-ink-faint">{label}</p>
-              <p className="metric mt-0.5 text-xl font-bold">{value}</p>
-            </div>
-          ))}
-        </div>
+        <SummaryCards cans={summary.cans} flavors={summary.flavors} caffeine={summary.caffeine} />
         <FlavorLeaderboard window={window} />
         <StreakCard />
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => openSheet({ kind: "profile" })}
-          >
-            <UserCog className="h-4 w-4 text-volt" /> Profile & Alerts
-          </button>
-          <button
-            type="button"
-            className="btn-primary !text-base"
-            onClick={() => openSheet({ kind: "wrapped" })}
-          >
-            <Share2 className="h-4 w-4" /> Wrapped
-          </button>
-        </div>
+        <StatsActions
+          onProfile={() => openSheet({ kind: "profile" })}
+          onWrapped={() => openSheet({ kind: "wrapped" })}
+        />
       </div>
     </>
   );

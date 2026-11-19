@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createCheckIn } from "@/domain/check-in";
-import { dayActivity, monsterStreak } from "@/domain/streak";
-import { dexProgress, clubDex } from "@/domain/dex";
-import { MONSTER_FLAVORS } from "@/data/flavors";
+import { FLAVORS, MONSTER_FLAVORS } from "@/data/flavors";
 import { ME_ID } from "@/data/mock-data";
+import { createCheckIn } from "@/domain/check-in";
+import { clubDex, dexProgress } from "@/domain/dex";
+import { globalRank } from "@/domain/stats";
+import { dayActivity, monsterStreak } from "@/domain/streak";
+import { addHours } from "@/domain/time";
 import { createInitialState } from "./app-state";
 import { appReducer } from "./reducer";
 import { clubCheckIns, clubFeed, findClubByCode, me } from "./selectors";
@@ -11,6 +13,10 @@ import { clubCheckIns, clubFeed, findClubByCode, me } from "./selectors";
 const initial = createInitialState();
 
 describe("seed world", () => {
+  it("seeds at least 60 canonical Monster flavors", () => {
+    expect(MONSTER_FLAVORS.length).toBeGreaterThanOrEqual(60);
+  });
+
   it("gives the demo member a 14-day current and 29-day longest Monster Streak", () => {
     expect(monsterStreak(dayActivity(initial.checkIns, ME_ID), "2026-11-18")).toEqual({
       current: 14,
@@ -26,7 +32,14 @@ describe("seed world", () => {
 });
 
 describe("appReducer", () => {
-  it("posts a Check-In into the Club feed with an unlock system event", () => {
+  it("posts a Check-In once to Global counts even when shared across multiple Clubs", () => {
+    const beforeGlobal =
+      globalRank(FLAVORS, "papillon", {
+        window: "all",
+        checkIns: initial.checkIns,
+        baselineIds: initial.baselineIds,
+        nowIso: initial.nowIso,
+      })?.count ?? 0;
     const checkIn = createCheckIn({
       id: "new-1",
       memberId: ME_ID,
@@ -42,13 +55,60 @@ describe("appReducer", () => {
       type: "post_check_in",
       payload: {
         checkIn,
-        shares: [{ checkInId: "new-1", targetType: "club", targetId: "night-shift" }],
+        shares: [
+          { checkInId: "new-1", targetType: "club", targetId: "night-shift" },
+          { checkInId: "new-1", targetType: "club", targetId: "ultra-society" },
+        ],
         flavorRequest: null,
       },
     });
-    const feed = clubFeed(next, "night-shift");
-    expect(feed.at(-1)?.kind).toBe("system");
-    expect(feed.some((i) => i.id === "new-1")).toBe(true);
+    const afterGlobal =
+      globalRank(FLAVORS, "papillon", {
+        window: "all",
+        checkIns: next.checkIns,
+        baselineIds: next.baselineIds,
+        nowIso: next.nowIso,
+      })?.count ?? 0;
+    expect(afterGlobal).toBe(beforeGlobal + 1);
+    expect(clubFeed(next, "night-shift").at(-1)?.kind).toBe("system");
+    expect(clubFeed(next, "ultra-society").some((i) => i.id === "new-1")).toBe(true);
+  });
+
+  it("accepts a 24h retroactive Check-In and rejects Check-Ins older than 24h", () => {
+    const within = createCheckIn({
+      id: "ok-24",
+      memberId: ME_ID,
+      brand: "monster",
+      flavorId: "ultra-zero",
+      volumeMl: 473,
+      rating: 4,
+      consumedAt: addHours(initial.nowIso, -24),
+      postedAt: initial.nowIso,
+      scene: "studio",
+    });
+    const tooOld = createCheckIn({
+      id: "old-25",
+      memberId: ME_ID,
+      brand: "monster",
+      flavorId: "ultra-zero",
+      volumeMl: 473,
+      rating: 4,
+      consumedAt: addHours(initial.nowIso, -25),
+      postedAt: initial.nowIso,
+      scene: "studio",
+    });
+    expect(
+      appReducer(initial, {
+        type: "post_check_in",
+        payload: { checkIn: within, shares: [], flavorRequest: null },
+      }).checkIns.some((c) => c.id === "ok-24"),
+    ).toBe(true);
+    expect(
+      appReducer(initial, {
+        type: "post_check_in",
+        payload: { checkIn: tooOld, shares: [], flavorRequest: null },
+      }),
+    ).toBe(initial);
   });
 
   it("toggles reactions on and off", () => {
@@ -62,9 +122,24 @@ describe("appReducer", () => {
     expect(off.checkIns.find((c) => c.id === "f-camila-rb")?.reactions.bolt).not.toContain(ME_ID);
   });
 
-  it("voids a Check-In when the third BS vote lands", () => {
+  it("voids a Check-In on quorum vote and removes it from Global counts", () => {
+    const before =
+      globalRank(FLAVORS, "original", {
+        window: "all",
+        checkIns: initial.checkIns,
+        baselineIds: initial.baselineIds,
+        nowIso: initial.nowIso,
+      })?.count ?? 0;
     const next = appReducer(initial, { type: "vote_dispute", checkInId: "f-thiago-shelf" });
     expect(next.checkIns.find((c) => c.id === "f-thiago-shelf")?.status).toBe("voided");
+    const after =
+      globalRank(FLAVORS, "original", {
+        window: "all",
+        checkIns: next.checkIns,
+        baselineIds: next.baselineIds,
+        nowIso: next.nowIso,
+      })?.count ?? 0;
+    expect(after).toBe(before - 1);
   });
 
   it("ignores blank chat messages and blank profile names", () => {

@@ -14,6 +14,14 @@ const GLOBAL_WINDOW_FACTOR: Readonly<Record<TimeWindow, number>> = {
   week: 0.0149,
 };
 
+export interface GlobalCountsOptions {
+  readonly window: TimeWindow;
+  readonly offBrand: boolean;
+  readonly checkIns?: readonly CheckIn[];
+  readonly baselineIds?: ReadonlySet<string>;
+  readonly nowIso?: string;
+}
+
 export function localFlavorCounts(
   checkIns: readonly CheckIn[],
   options: { readonly window: TimeWindow; readonly nowIso: string; readonly offBrand: boolean },
@@ -30,25 +38,70 @@ export function localFlavorCounts(
     .toSorted((a, b) => b.count - a.count || a.flavorId.localeCompare(b.flavorId));
 }
 
+function deltaForCheckIn(c: CheckIn, baselineIds?: ReadonlySet<string>): number {
+  const isBaseline = baselineIds?.has(c.id) ?? false;
+  if (isBaseline) return c.status === "voided" ? -1 : 0;
+  return c.status === "voided" ? 0 : 1;
+}
+
+export function globalDeltaByFlavor(
+  checkIns: readonly CheckIn[],
+  options: {
+    readonly window: TimeWindow;
+    readonly nowIso?: string;
+    readonly baselineIds?: ReadonlySet<string>;
+  },
+): ReadonlyMap<string, number> {
+  const deltas = new Map<string, number>();
+  for (const c of checkIns) {
+    if (c.flavorId === null) continue;
+    if (options.nowIso !== undefined && !isInWindow(c.consumedAt, options.window, options.nowIso)) {
+      continue;
+    }
+    const delta = deltaForCheckIn(c, options.baselineIds);
+    if (delta !== 0) deltas.set(c.flavorId, (deltas.get(c.flavorId) ?? 0) + delta);
+  }
+  return deltas;
+}
+
 export function globalFlavorCounts(
   catalog: readonly Flavor[],
-  options: { readonly window: TimeWindow; readonly offBrand: boolean },
+  options: GlobalCountsOptions,
 ): readonly FlavorCount[] {
   const factor = GLOBAL_WINDOW_FACTOR[options.window];
+  const deltas =
+    options.checkIns === undefined
+      ? new Map<string, number>()
+      : globalDeltaByFlavor(options.checkIns, {
+          window: options.window,
+          ...(options.nowIso === undefined ? {} : { nowIso: options.nowIso }),
+          ...(options.baselineIds === undefined ? {} : { baselineIds: options.baselineIds }),
+        });
   return catalog
     .filter((f) => (f.brand !== "monster") === options.offBrand)
-    .map((f) => ({ flavorId: f.id, count: Math.round(f.globalCount * factor) }))
+    .map((f) => ({
+      flavorId: f.id,
+      count: Math.max(0, Math.round(f.globalCount * factor) + (deltas.get(f.id) ?? 0)),
+    }))
     .toSorted((a, b) => b.count - a.count);
+}
+
+export interface GlobalRankOptions {
+  readonly window: TimeWindow;
+  readonly checkIns?: readonly CheckIn[];
+  readonly baselineIds?: ReadonlySet<string>;
+  readonly nowIso?: string;
 }
 
 export function globalRank(
   catalog: readonly Flavor[],
   flavorId: string,
-  window: TimeWindow,
+  windowOrOptions: TimeWindow | GlobalRankOptions,
 ): { readonly rank: number; readonly count: number } | null {
   const target = catalog.find((f) => f.id === flavorId);
   if (target === undefined) return null;
-  const ranked = globalFlavorCounts(catalog, { window, offBrand: target.brand !== "monster" });
+  const opts = typeof windowOrOptions === "string" ? { window: windowOrOptions } : windowOrOptions;
+  const ranked = globalFlavorCounts(catalog, { ...opts, offBrand: target.brand !== "monster" });
   const index = ranked.findIndex((r) => r.flavorId === flavorId);
   const entry = ranked[index];
   return entry === undefined ? null : { rank: index + 1, count: entry.count };

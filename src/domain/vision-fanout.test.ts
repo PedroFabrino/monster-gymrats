@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FLAVORS } from "@/data/flavors";
 import { CHALLENGES, CLUBS } from "@/data/mock-data";
 import { SAMPLE_PRESETS } from "@/data/presets";
-import { openDispute, resolveDispute, voteOnDispute } from "./disputes";
+import { disputeQuorum, openDispute, resolveDispute, voteOnDispute } from "./disputes";
 import { buildShareOptions, toggleShareOption } from "./fanout";
 import { interpretVision, lookupBarcode, parseVisionResponse } from "./vision";
 
@@ -58,17 +58,33 @@ describe("Group Share fan-out", () => {
 });
 
 describe("Disputes", () => {
+  const nowIso = "2026-11-18T00:00:00.000Z";
   const dispute = openDispute({
     id: "d",
     raisedBy: "a",
     reason: "shelf",
-    nowIso: "2026-11-18T00:00:00.000Z",
+    nowIso,
+    activeMemberCount: 10,
+  });
+
+  it("computes 30% quorum with a minimum floor of 2 votes", () => {
+    expect(disputeQuorum(3)).toBe(2);
+    expect(disputeQuorum(5)).toBe(2);
+    expect(disputeQuorum(10)).toBe(3);
+    expect(disputeQuorum(12)).toBe(4);
+    expect(dispute.votesNeeded).toBe(3);
   });
 
   it("voids after reaching the vote threshold and ignores duplicate votes", () => {
-    const twice = voteOnDispute(voteOnDispute(dispute, "b"), "b");
+    const twice = voteOnDispute(voteOnDispute(dispute, "b", nowIso), "b", nowIso);
     expect(twice.voterIds).toHaveLength(2);
-    expect(voteOnDispute(twice, "c").status).toBe("voided");
+    expect(voteOnDispute(twice, "c", nowIso).status).toBe("voided");
+  });
+
+  it("ignores votes after the 48-hour dispute window expires", () => {
+    const expired = voteOnDispute(dispute, "b", "2026-11-20T00:00:01.000Z");
+    expect(expired.voterIds).toHaveLength(1);
+    expect(expired.status).toBe("open");
   });
 
   it("lets admins clear an open dispute but not reopen a settled one", () => {

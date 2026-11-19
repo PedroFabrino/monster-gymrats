@@ -7,29 +7,34 @@ export const HOME_CLUB_ID = "night-shift";
 function member(
   id: string,
   displayName: string,
-  avatarColor: string,
-  signatureFlavorId: string,
+  opts: { readonly avatarColor: string; readonly signatureFlavorId: string },
 ): Member {
-  return { id, displayName, handle: displayName.toLowerCase(), avatarColor, signatureFlavorId };
+  return {
+    id,
+    displayName,
+    handle: displayName.toLowerCase(),
+    avatarColor: opts.avatarColor,
+    signatureFlavorId: opts.signatureFlavorId,
+  };
 }
 
 export const MEMBERS: readonly Member[] = [
-  member(ME_ID, "Rafa", "#95D600", "ultra-zero"),
-  member("u-pedro", "Pedro", "#00D4FF", "ultra-paradise"),
-  member("u-lucas", "Lucas", "#FF9F1C", "mango-loco"),
-  member("u-bia", "Bia", "#FF4D8D", "ultra-rosa"),
-  member("u-thiago", "Thiago", "#F97316", "original"),
-  member("u-marina", "Marina", "#38BDF8", "ultra-rosa"),
-  member("u-joao", "Joao", "#FFB703", "rehab-tea-lemonade"),
-  member("u-camila", "Camila", "#22C55E", "pipeline-punch"),
-  member("u-diego", "Diego", "#D97706", "java-mean-bean"),
-  member("u-ana", "Ana", "#E2E8F0", "ultra-strawberry"),
-  member("u-felipe", "Felipe", "#EAB308", "zero-sugar"),
-  member("u-julia", "Julia", "#F472B6", "ultra-watermelon"),
-  member("u-nico", "Nico", "#60A5FA", "pacific-punch"),
-  member("u-leo", "Leo", "#4ADE80", "ultra-gold"),
-  member("u-sam", "Sam", "#FB7185", "khaotic"),
-  member("u-vic", "Vic", "#A3E635", "lo-carb"),
+  member(ME_ID, "Rafa", { avatarColor: "#95D600", signatureFlavorId: "ultra-zero" }),
+  member("u-pedro", "Pedro", { avatarColor: "#00D4FF", signatureFlavorId: "ultra-paradise" }),
+  member("u-lucas", "Lucas", { avatarColor: "#FF9F1C", signatureFlavorId: "mango-loco" }),
+  member("u-bia", "Bia", { avatarColor: "#FF4D8D", signatureFlavorId: "ultra-rosa" }),
+  member("u-thiago", "Thiago", { avatarColor: "#F97316", signatureFlavorId: "original" }),
+  member("u-marina", "Marina", { avatarColor: "#38BDF8", signatureFlavorId: "ultra-rosa" }),
+  member("u-joao", "Joao", { avatarColor: "#FFB703", signatureFlavorId: "rehab-tea-lemonade" }),
+  member("u-camila", "Camila", { avatarColor: "#22C55E", signatureFlavorId: "pipeline-punch" }),
+  member("u-diego", "Diego", { avatarColor: "#D97706", signatureFlavorId: "java-mean-bean" }),
+  member("u-ana", "Ana", { avatarColor: "#E2E8F0", signatureFlavorId: "ultra-strawberry" }),
+  member("u-felipe", "Felipe", { avatarColor: "#EAB308", signatureFlavorId: "zero-sugar" }),
+  member("u-julia", "Julia", { avatarColor: "#F472B6", signatureFlavorId: "ultra-watermelon" }),
+  member("u-nico", "Nico", { avatarColor: "#60A5FA", signatureFlavorId: "pacific-punch" }),
+  member("u-leo", "Leo", { avatarColor: "#4ADE80", signatureFlavorId: "ultra-gold" }),
+  member("u-sam", "Sam", { avatarColor: "#FB7185", signatureFlavorId: "khaotic" }),
+  member("u-vic", "Vic", { avatarColor: "#A3E635", signatureFlavorId: "lo-carb" }),
 ];
 
 const NIGHT_SHIFT_MEMBERS = MEMBERS.slice(0, 12).map((m) => m.id);

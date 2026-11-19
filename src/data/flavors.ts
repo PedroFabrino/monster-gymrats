@@ -67,6 +67,21 @@ const MONSTER_ROWS: readonly Row[] = [
   ["reserve-orange-dreamsicle", "Reserve Orange Dreamsicle", "Reserve", 160, 55, "#EA580C", 21190],
   ["nitro-super-dry", "Nitro Super Dry", "Nitro", 160, 0, "#D1D5DB", 25420],
   ["nitro-cosmic-peach", "Nitro Cosmic Peach", "Nitro", 160, 0, "#F9A8D4", 16880],
+  ["ultra-blue-original", "Ultra Blue", "Ultra", 150, 0, "#2563EB", 41200],
+  ["monster-import", "Monster Import", "Original", 179, 58, "#22C55E", 28400],
+  ["monster-super-cola", "Monster Super Cola", "Original", 160, 50, "#991B1B", 11200],
+  ["lewis-hamilton-zero", "Monster Lewis Hamilton Zero", "Original", 160, 0, "#0EA5E9", 29500],
+  ["vr46-the-doctor", "Monster The Doctor (VR46)", "Juice", 160, 44, "#EAB308", 32100],
+  ["juice-ripper", "Juice Ripper", "Juice", 160, 47, "#FACC15", 41800],
+  ["juice-viking-berry", "Juice Viking Berry", "Juice", 160, 45, "#9333EA", 22700],
+  ["juice-mixxd", "Juice Mixxd Punch", "Juice", 160, 49, "#A855F7", 19400],
+  ["rehab-green-tea", "Rehab Green Tea", "Rehab", 160, 12, "#84CC16", 31200],
+  ["rehab-rojo-tea", "Rehab Rojo Tea", "Rehab", 160, 14, "#EF4444", 16500],
+  ["rehab-raspberry-tea", "Rehab Raspberry Tea", "Rehab", 160, 12, "#E11D48", 20400],
+  ["java-triple-shot", "Java 300 Triple Shot", "Java", 300, 31, "#451A03", 19100],
+  ["java-kona-blend", "Java Kona Blend", "Java", 200, 34, "#713F12", 14200],
+  ["reserve-peaches-creme", "Reserve Peaches N' Creme", "Reserve", 160, 53, "#FDBA74", 24300],
+  ["nitro-cold-brew-latte", "Nitro Cold Brew Sweet Black", "Nitro", 200, 0, "#374151", 12800],
 ];
 
 function volumeFor(series: FlavorSeries): CanSizeMl {

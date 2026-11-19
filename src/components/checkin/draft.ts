@@ -40,12 +40,19 @@ export function withFlavor(draft: CheckInDraft, flavor: Flavor): CheckInDraft {
   };
 }
 
-export function initialDraft(
-  preset: SamplePreset,
-  result: IdentifyResult,
-  catalog: readonly Flavor[],
-  unverified: boolean,
-): CheckInDraft {
+export interface InitialDraftOptions {
+  readonly preset: SamplePreset;
+  readonly result: IdentifyResult;
+  readonly catalog: readonly Flavor[];
+  readonly unverified: boolean;
+}
+
+export function initialDraft({
+  preset,
+  result,
+  catalog,
+  unverified,
+}: InitialDraftOptions): CheckInDraft {
   const base: CheckInDraft = {
     preset,
     result,

@@ -1,5 +1,11 @@
 node_modules/
+.next/
+out/
+coverage/
+tsconfig.tsbuildinfo
 .env
+.env*.local
+.bolt/
 vite.config.js.timestamp-*.mjs
 vite.config.mjs.timestamp-*.mjs
 vite.config.cjs.timestamp-*.mjs

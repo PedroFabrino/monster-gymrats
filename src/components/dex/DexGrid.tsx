@@ -1,6 +1,7 @@
 "use client";
 
 import { Crown } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { Flavor } from "@/types/domain";
 import { CanArt } from "@/components/ui/CanArt";
 import { SERIES_ACCENT } from "@/data/flavors";
@@ -10,6 +11,22 @@ interface DexGridProps {
   readonly flavors: readonly Flavor[];
   readonly cells: ReadonlyMap<string, DexCell>;
   readonly onSelect: (flavorId: string) => void;
+}
+
+function ChampionBadge() {
+  return (
+    <span
+      className="absolute right-1.5 top-1.5 rounded-full bg-series-rehab/15 p-1 text-series-rehab"
+      title="Flavor Champion"
+    >
+      <Crown className="h-3 w-3 fill-series-rehab" />
+    </span>
+  );
+}
+
+function tileStyle(locked: boolean, border: string): CSSProperties {
+  if (locked) return { borderColor: "#262B36" };
+  return { borderColor: `${border}80`, boxShadow: `inset 0 0 24px ${border}14` };
 }
 
 function DexTile({
@@ -29,19 +46,9 @@ function DexTile({
       onClick={onSelect}
       aria-label={locked ? "Locked flavor" : `${flavor.name}, ${cell.count} logged`}
       className="press group relative flex flex-col items-center rounded-2xl border bg-carbon px-1.5 pb-2 pt-3 transition-colors"
-      style={{
-        borderColor: locked ? "#262B36" : `${border}80`,
-        boxShadow: locked ? undefined : `inset 0 0 24px ${border}14`,
-      }}
+      style={tileStyle(locked, border)}
     >
-      {cell?.crowned === true && (
-        <span
-          className="absolute right-1.5 top-1.5 rounded-full bg-series-rehab/15 p-1 text-series-rehab"
-          title="Flavor Champion"
-        >
-          <Crown className="h-3 w-3 fill-series-rehab" />
-        </span>
-      )}
+      {cell?.crowned === true && <ChampionBadge />}
       <CanArt
         color={flavor.color}
         accent={flavor.accent}
